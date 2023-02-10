@@ -182,10 +182,10 @@ class mainwindow(QMainWindow):
         else:
             fileNeed.append('VT_3V3.cfg')
 
-        srcFile = get_path()+'\\config\\'+fileNeed[0]
-        dirFile = self.linker.getVolume()
-        shutil.copyfile(srcFile, dirFile)
-        # shutil.copyfile(get_path()+'//config//'+fileNeed[0], self.linker.getVolume()+'//')
+        # srcFile = get_path()+'\\config\\'+fileNeed[0]
+        # dirFile = self.linker.getVolume()
+        # shutil.copy(srcFile, dirFile)
+        shutil.copytree(get_path()+'//config//', self.linker.getVolume()+'//')
 
     @pyqtSlot()  
     def on_cbbDevice_Activated(self):
