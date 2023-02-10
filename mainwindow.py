@@ -49,6 +49,7 @@ LINK_MAX = []
 BootLoader = []
 
 def analyseUSB():
+    num = 0
     disks = scanUSBDevice()
     for disk in disks:
         if 'Removable' in disk:
@@ -57,9 +58,11 @@ def analyseUSB():
                 string = linkIFString.group()
                 if (string[:-1] == 'I'):
                     LINK_MINI.append(string)
+                    num += 1
                     print('MINI found')
                 elif (string[:-1] == 'A'):
                     LINK_MAX.append(string)
+                    num += 1
                     print('Max found')
                 usbMSC.append(string)
             linkBTString = re.search(r'\w:\s+BOOTLOADER', disk)
@@ -67,6 +70,11 @@ def analyseUSB():
                 print("boot found")
                 BootLoader.append(linkBTString.group())
                 usbMSC.append(linkBTString.group())
+                num += 1
+        else:
+            print('No Udisk found')
+    return num
+        
 
 
 
@@ -87,11 +95,12 @@ class mainwindow(QMainWindow):
         self.cbbPOut.setCurrentIndex(1)
         self.cbbPOut.setEnabled(False)
         self.btnUpgrade.setEnabled(False)
-        self.textView.setText("- "*5+time.asctime()+" -"*5)
+        self.textView.setText("- "*3+time.asctime()+" -"*3)
         self.textView.ensureCursorVisible()
         self.processBar.setRange(0,99)
         # self.processBar.setVisible(False)
-        analyseUSB()
+        self.scanNum = analyseUSB()
+        self.log("Found Device Total: "+str(self.scanNum))
 
     def log(self, text):
         self.textView.append(text)
@@ -107,8 +116,6 @@ class mainwindow(QMainWindow):
                 indexstring = showString.replace(' ','')
                 self.cbbDevice.addItem(indexstring)
                 # self.log("Scan: "+indexstring)
-            self.log("Scane Done!")
-        
         
 
     @pyqtSlot()
@@ -119,8 +126,9 @@ class mainwindow(QMainWindow):
 
     @pyqtSlot()
     def on_btnRefresh_clicked(self):
-        self.log("Scan USB device ...")
-        analyseUSB()
+        # self.log("Scan USB device ...")
+        self.scanNum = analyseUSB()
+        self.log("Found Device Total: "+str(self.scanNum))
         # self.processBar.setValue(5)
         pass
 
