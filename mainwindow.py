@@ -11,6 +11,7 @@
 import os
 import sys
 import time
+import shutil
 import subprocess
 import re
 import mm32link
@@ -29,7 +30,7 @@ def get_path():
 
 def sh(command, print_msg=True):
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    result = p.stdout.read().decode('gb18030') #utf-8
+    result = p.stdout.read().decode('gbk') #utf-8   'gb18030'
     if print_msg:
         print(result)
     return result
@@ -49,20 +50,21 @@ LINK_MAX = []
 BootLoader = []
 
 def analyseUSB():
-    num = 0
     disks = scanUSBDevice()
+    usbMSC.clear()
+    LINK_MINI.clear()
+    LINK_MAX.clear()
+    BootLoader.clear()
     for disk in disks:
-        if 'Removable' in disk:
+        if ('Removable' in disk) or ('可移动磁盘' in disk):
             linkIFString = re.search(r'\w:\s+MM32-LINK\s?\w', disk)
             if linkIFString:
                 string = linkIFString.group()
                 if (string[:-1] == 'I'):
                     LINK_MINI.append(string)
-                    num += 1
                     print('MINI found')
                 elif (string[:-1] == 'A'):
                     LINK_MAX.append(string)
-                    num += 1
                     print('Max found')
                 usbMSC.append(string)
             linkBTString = re.search(r'\w:\s+BOOTLOADER', disk)
@@ -70,12 +72,6 @@ def analyseUSB():
                 print("boot found")
                 BootLoader.append(linkBTString.group())
                 usbMSC.append(linkBTString.group())
-                num += 1
-        else:
-            print('No Udisk found')
-    return num
-        
-
 
 
 
@@ -85,7 +81,7 @@ class mainwindow(QMainWindow):
         uic.loadUi(get_path()+"\\mm32upgrade.ui", self)
         self.show()
         self.initWindow()
-
+        self.linker = mm32link.mm32link()
         self.scanDevice = QtCore.QTimer()
         self.scanDevice.setInterval(2000)
         self.scanDevice.timeout.connect(self.scanDevice_timeout)
@@ -99,7 +95,8 @@ class mainwindow(QMainWindow):
         self.textView.ensureCursorVisible()
         self.processBar.setRange(0,99)
         # self.processBar.setVisible(False)
-        self.scanNum = analyseUSB()
+        analyseUSB()
+        self.scanNum = len(usbMSC)
         self.log("Found Device Total: "+str(self.scanNum))
 
     def log(self, text):
@@ -116,7 +113,84 @@ class mainwindow(QMainWindow):
                 indexstring = showString.replace(' ','')
                 self.cbbDevice.addItem(indexstring)
                 # self.log("Scan: "+indexstring)
-        
+        if (self.cbbDevice.count() >= 1) and (self.linker.getVersion() == ''):
+            self.parseLinktext(self.cbbDevice.currentIndex())
+            
+
+    def parseLinktext(self, index):
+        volumeDir = usbMSC[index][:2]
+        self.linker.setVolume(volumeDir)
+        try:
+            with open(volumeDir+'/details.txt', 'r') as f:
+                details = f.read()
+                # Interface Version: 220729
+                # versionString = details.match(r'Interface Version: (\d+)') 
+                version= re.search(r'Interface Version: (\d+)', details).group().split(':')
+                self.linker.setVersion(version[1].strip())
+                # Unique ID: 08811f11f1c004c75fd
+                uid = re.search(r'Unique ID: [a-zA-Z0-9]+', details).group().split(':')
+                self.linker.setUID(uid[1].strip())
+                if (self.linker.getUID()[:3] == '088'):
+                    self.linker.setType("MM32LINK-MINI")
+                elif (self.linker.getUID()[:3] == '059'):
+                    self.linker.setType("MM32LINK-MAX")
+                else:
+                    self.linker.setType("MM32LINK-OB")
+                # Target Power output: OFF
+                powerString = re.search(r'Target Power output: [a-zA-Z0-9\.]+', details).group().split(':')
+                # if (powerString[1].strip() == '5V'):
+                #     self.linker.setOriPower(1)
+                # elif (powerString[1].strip() == '3.3V'):
+                #     self.linker.setOriPower(2)
+                # else:
+                #     self.linker.setOriPower(0)
+                self.linker.setOriPower(powerString[1].strip())
+                # Beep Mode: ON
+                beepString = re.search(r'Beep Mode: [a-zA-Z]+', details).group().split(':')
+                # if (beepString[1].strip() == 'ON'):
+                #     self.linker.setOriBeep(1)
+                # else:
+                #     self.linker.setOriBeep(0)
+                self.linker.setOriBeep(beepString[1].strip())
+                f.close()
+                print("open OK")
+        except Exception as e:
+            print("error")
+            pass
+        self.log('Select Device details:\n- Type :\t'+self.linker.getType()+\
+            '\n- Rev. :\t'+self.linker.getVersion()+'\n- UUID :\t'+\
+            self.linker.getUID()+'\n- Dir  : \t'+self.linker.getVolume()+\
+            '\n- Beep :\t'+self.linker.getOriBeep()+'\n- Power:\t'+\
+            self.linker.getOriPower())
+
+
+    def linkerConfig(self):
+        fileNeed = []
+        if (self.linker.getBeep() == self.linker.getOriBeep()):
+            pass
+        elif (self.linker.getBeep() == 'OFF'):
+            fileNeed.append('BEEP_OFF.cfg')
+        else:
+            fileNeed.append('BEEP_ON.cfg')
+
+        if (self.linker.getPower() == self.linker.getOriPower()):
+            pass
+        elif (self.linker.getPower() == '5V'):
+            fileNeed.append('VT_5V.cfg')
+        elif (self.linker.getPower() == 'OFF'):
+            fileNeed.append('VT_OFF.cfg')
+        else:
+            fileNeed.append('VT_3V3.cfg')
+
+        srcFile = get_path()+'\\config\\'+fileNeed[0]
+        dirFile = self.linker.getVolume()
+        shutil.copyfile(srcFile, dirFile)
+        # shutil.copyfile(get_path()+'//config//'+fileNeed[0], self.linker.getVolume()+'//')
+
+    @pyqtSlot()  
+    def on_cbbDevice_Activated(self):
+        print("on_cbbDevice_Activated")
+
 
     @pyqtSlot()
     def on_btnUpgrade_clicked(self):
@@ -127,7 +201,9 @@ class mainwindow(QMainWindow):
     @pyqtSlot()
     def on_btnRefresh_clicked(self):
         # self.log("Scan USB device ...")
-        self.scanNum = analyseUSB()
+        self.linker.__init__()
+        analyseUSB()
+        self.scanNum = len(usbMSC)
         self.log("Found Device Total: "+str(self.scanNum))
         # self.processBar.setValue(5)
         pass
@@ -135,6 +211,7 @@ class mainwindow(QMainWindow):
     @pyqtSlot()
     def on_btnOK_clicked(self):
         self.processBar.setVisible(True)
+        self.linkerConfig()
         print("on_btnOK_clicked")
         pass
 
@@ -148,21 +225,40 @@ class mainwindow(QMainWindow):
     @pyqtSlot()
     def on_cboxBeep_clicked(self):
         print("on_cboxBeep_clicked")
+        if self.cboxBeep.isChecked():
+            self.linker.setBeep('ON')
+        else:
+            self.linker.setBeep('OFF')
+        print('Beep:'+str(self.linker.getBeep()))
         pass
 
     @pyqtSlot()
     def on_cboxPower_clicked(self):
         if self.cboxPower.isChecked():
             self.cbbPOut.setEnabled(True)
+            self.cbbPOut.setCurrentIndex(1)
+            self.linker.setPower('5V')
         else:
             self.cbbPOut.setEnabled(False)
-        print("on_cboxPower_clicked")
+            self.linker.setPower('OFF')
+        print('Power:'+str(self.linker.getPower()))
         pass
 
     @pyqtSlot()
     def on_cbbPOut_currentIndexChanged(self):
         if (self.cbbPOut.getCurrentIndex == 0):
-            self.cboxPower.setEnabled(false)
+            self.linker.setPower('3.3V')
+        elif (self.cbbPOut.getCurrentIndex == 1):
+            self.linker.setPower('5V')
+        print('on_cbbPOut_currentIndexChanged Power'+str(self.linker.getPower()))
+
+    @pyqtSlot()
+    def on_cbbPOut_activated(self):
+        if (self.cbbPOut.getCurrentIndex == 0):
+            self.linker.setPower(2)
+        elif (self.cbbPOut.getCurrentIndex == 1):
+            self.linker.setPower(1)
+        print('on_cbbPOut_currentIndexChanged Power'+str(self.linker.getPower()))
 
     @pyqtSlot()
     def on_cbbVersion_clicked(self):

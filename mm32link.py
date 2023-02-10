@@ -9,17 +9,26 @@
 """
 class mm32link():
     def __init__(self):
-        self.mscName = 'MM32LINK'
+        self.volume = ''
+        self.type = 'MM32LINK'
         self.uid = ''
         self.version = ''
-        self.beep = False
-        self.power = 0
+        self.beep = ''
+        self.power = ''
+        self.oribeep = ''
+        self.oripower = ''
     
-    def setMscName(self, text):
-        self.mscName = text
+    def setVolume(self, text):
+        self.volume = text
 
-    def getMscName(self):
-        return self.mscName
+    def getVolume(self):
+        return self.volume
+
+    def setType(self, text):
+        self.type = text
+
+    def getType(self):
+        return self.type
 
     def setUID(self,text):
         self.uid = text
@@ -33,11 +42,23 @@ class mm32link():
     def getBeep(self):
         return self.beep
 
+    def setOriBeep(self, text):
+        self.oribeep = text
+
+    def getOriBeep(self):
+        return self.oribeep
+
     def setPower(self, value):
         self.power = value
     
     def getPower(self):
         return self.power
+
+    def setOriPower(self, value):
+        self.oripower = value
+    
+    def getOriPower(self):
+        return self.oripower
 
     def setVersion(self, text):
         self.version = text
