@@ -30,7 +30,7 @@
     <normaloff>MM32_Logo.ico</normaloff>MM32_Logo.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -41,7 +41,7 @@
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout"/>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>1</x>
@@ -230,9 +230,9 @@
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QPushButton" name="btnCancel">
+               <widget class="QPushButton" name="btnClearLog">
                 <property name="text">
-                 <string>Check</string>
+                 <string>Clear log</string>
                 </property>
                </widget>
               </item>
@@ -249,7 +249,7 @@
           <string>Message</string>
          </property>
          <layout class="QFormLayout" name="formLayout_2">
-          <item row="0" column="0">
+          <item row="0" column="1">
            <widget class="QTextBrowser" name="textView"/>
           </item>
          </layout>
@@ -290,9 +290,25 @@
   <tabstop>cboxPower</tabstop>
   <tabstop>cbbPOut</tabstop>
   <tabstop>cboxBeep</tabstop>
-  <tabstop>btnCancel</tabstop>
-  <tabstop>textView</tabstop>
+  <tabstop>btnClearLog</tabstop>
  </tabstops>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>btnClearLog</sender>
+   <signal>clicked()</signal>
+   <receiver>textView</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>141</x>
+     <y>232</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>309</x>
+     <y>159</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
