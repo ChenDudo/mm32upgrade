@@ -8,4 +8,4 @@
 
 界面如下：
 
-![app](/mm32upgrade/doc/show.jpg)
+![show error](.//doc//show.jpg)
