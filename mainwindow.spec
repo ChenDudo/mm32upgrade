@@ -37,7 +37,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='mainwindow',
+    name='MM32-LINK Upgrade Tool',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
