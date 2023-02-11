@@ -5,3 +5,7 @@
 - 功能配置
   - Beep ON/OFF
   - Power Ouput: OFF/ 3.3V / 5V
+
+界面如下：
+
+![](./doc/show.jpg)
