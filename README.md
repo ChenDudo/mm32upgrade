@@ -8,4 +8,4 @@
 
 界面如下：
 
-![show error](..//doc//show.jpg)
+![show error](https://github.com/ChenDudo/mm32upgrade/blob/main/doc/show.jpg)
