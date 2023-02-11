@@ -9,15 +9,15 @@ py_files = [
 ]
 
 add_files = [
-    ('.\\MM32_Logo.ico', '.'),
-    ('.\\mm32upgrade.ui', '.'),
+    ('./MM32_Logo.ico', '.'),
+    ('./mm32upgrade.ui', '.'),
 ]
 
 a = Analysis(
     py_files,
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=add_files,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -50,5 +50,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='.\\MM32_Logo.ico'
+    icon='./MM32_Logo.ico'
 )

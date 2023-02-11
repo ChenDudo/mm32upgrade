@@ -15,8 +15,8 @@ class mm32link():
         self.version = ''
         self.beep = ''
         self.power = ''
-        self.oribeep = ''
-        self.oripower = ''
+        self.oribeep = 'OFF'
+        self.oripower = 'OFF'
     
     def setVolume(self, text):
         self.volume = text
