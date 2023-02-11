@@ -8,4 +8,4 @@
 
 界面如下：
 
-![show error](.//doc//show.jpg)
+![show error](.\\doc\\show.jpg)
