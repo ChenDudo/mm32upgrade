@@ -82,20 +82,22 @@ class mainwindow(QMainWindow):
     def scanDevice_timeout(self):
         if not self.isEnabled():
             return
-        if len(usbMSC) != self.cbbDevice.count():
-            self.cbbDevice.clear()
-            for item in usbMSC:
-                showString = item
-                indexstring = showString.replace(' ','')
-                self.cbbDevice.addItem(indexstring)
         if (self.cbbDevice.count() >= 1) and (self.linker.getVersion() == ''):
             self.parseLinktext(self.cbbDevice.currentIndex())
         if self.detectOnceEnable:
             self.analyseUSB()
             if len(usbMSC) == self.lastMscMum:
-                self.detectOnceEnable = False
                 self.processBar.setValue(99)
+                self.log("MSC Reload OK ...")
                 self.parseLinktext(self.cbbDevice.currentIndex())
+                self.detectOnceEnable = False
+        else:
+            if len(usbMSC) != self.cbbDevice.count():
+                self.cbbDevice.clear()
+                for item in usbMSC:
+                    showString = item
+                    indexstring = showString.replace(' ','')
+                    self.cbbDevice.addItem(indexstring)
 
     def parseLinktext(self, index):
         volumeDir = usbMSC[index][:2]
@@ -126,14 +128,13 @@ class mainwindow(QMainWindow):
         except Exception as e:
             print("error")
             pass
-        self.log('\nSelect Device details:\n- Type :\t'+self.linker.getType()+\
+        self.log('Select Device details:\n- Type :\t'+self.linker.getType()+\
             '\n- Rev. :\t'+self.linker.getVersion()+'\n- UUID :\t'+\
             self.linker.getUID()+'\n- Dir  : \t'+self.linker.getVolume()+\
             '\n- Beep :\t'+self.linker.getOriBeep()+'\n- Power:\t'+\
             self.linker.getOriPower())
 
     def analyseUSB(self):
-        
         disks = scanUSBDevice()
         usbMSC.clear()
         LINK_MINI.clear()
@@ -192,8 +193,8 @@ class mainwindow(QMainWindow):
             for file in fileNeed:
                 f = open(tmpPath+file, "a")
             try:
-                shutil.copy(tmpPath+fileNeed[0], self.linker.getVolume())
-                shutil.copy(tmpPath+fileNeed[1], self.linker.getVolume())
+                for i in range(len(fileNeed)):
+                    shutil.copy(tmpPath+fileNeed[i], self.linker.getVolume())
             except Exception as e:
                 print("Files copy error")
                 pass
@@ -207,18 +208,15 @@ class mainwindow(QMainWindow):
 
     @pyqtSlot()
     def on_btnUpgrade_clicked(self):
-        self.processBar.setVisible(True)
         print("on_btnUpgrade_clicked")
         pass
 
     @pyqtSlot()
     def on_btnRefresh_clicked(self):
-        # self.log("Scan USB device ...")
         self.linker.__init__()
         self.analyseUSB()
         self.scanNum = len(usbMSC)
         self.log("Found Device Total: "+str(self.scanNum))
-        # self.processBar.setValue(5)
         pass
 
     @pyqtSlot()
@@ -229,18 +227,13 @@ class mainwindow(QMainWindow):
             self.linker.setBeep('ON')
         else:
             self.linker.setBeep('OFF')
-        self.processBar.setValue(25)
-        # print('Beep:'+str(self.linker.getBeep()))
         if self.cboxPower.isChecked():
             if (self.cbbPOut.currentIndex() == 0):
                 self.linker.setPower('3.3V')
             elif (self.cbbPOut.currentIndex() == 1):
                 self.linker.setPower('5V')
-            
-            print(str(self.cbbPOut.currentIndex)+'Power'+str(self.linker.getPower()))
         else:
             self.linker.setPower('OFF')
-        # print('Power:'+str(self.linker.getPower()))
         self.linkerConfig()
         pass
 
@@ -251,7 +244,6 @@ class mainwindow(QMainWindow):
 
     @pyqtSlot()
     def on_cboxBeep_clicked(self):
-        # print("on_cboxBeep_clicked")
         pass
 
     @pyqtSlot()
