@@ -18,7 +18,7 @@ import mm32link
 
 from PyQt5.QtWidgets import QApplication,QMainWindow,QMessageBox,QFileDialog,QWidget
 from PyQt5 import QtCore,uic
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QThread
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QThread, QBasicTimer
 
 
 def get_path():
@@ -54,31 +54,62 @@ class mainwindow(QMainWindow):
         super(mainwindow, self).__init__()
         uic.loadUi(get_path()+"\\mm32upgrade.ui", self)
         self.show()
-        self.initWindow()
-
         self.detectOnceEnable = False
+        self.detectTwiceEnable = False
         self.linker = mm32link.mm32link()
         self.lastMscMum = 0
+        self.CntForProcess = 0
+        self.upgradeAction = False
+        self.initWindow()
+        self.analyseUSB()
+        self.scanNum = len(usbMSC)
+        self.log("Found Device Total: "+str(self.scanNum))
         self.scanDevice = QtCore.QTimer()
-        self.scanDevice.setInterval(2000)
+        self.scanDevice.setInterval(500)
         self.scanDevice.timeout.connect(self.scanDevice_timeout)
         self.scanDevice.start()
+        self.timer1 = QBasicTimer()
     
     def initWindow(self):
+        self.processBar.setRange(0,99)
         self.cbbPOut.setCurrentIndex(1)
         self.cbbPOut.setEnabled(False)
         self.btnUpgrade.setEnabled(False)
         self.textView.setText("- "*3+time.asctime()+" -"*3)
         self.textView.ensureCursorVisible()
-        self.processBar.setRange(0,99)
-        self.analyseUSB()
-        self.scanNum = len(usbMSC)
-        self.log("Found Device Total: "+str(self.scanNum))
 
     def log(self, text):
+        self.textView.clear()
+        self.textView.setText("["+time.asctime()+"]\n")
         self.textView.append(text)
         self.textView.ensureCursorVisible()
-        
+    
+    def myTimerState(self, flag):
+        if flag:
+            self.CntForProcess = 0
+            self.timer1.start(100, self)
+        else:
+            self.timer1.stop()
+            # self.timer1.isActive()
+    
+    def timerEvent(self, e):
+        if self.CntForProcess >= 90:
+            self.analyseUSB()
+            self.timer1.stop()
+            
+            if len(usbMSC) == self.lastMscMum:
+                print("MSC Reload OK ...")
+                self.processBar.setValue(99)
+                for i in range(len(usbMSC)):
+                    if usbMSC[i][:2] == self.linker.getVolume():
+                        index = i
+                        self.parseLinktext(index)
+                        self.timerEvent(False)
+        else:
+            self.CntForProcess += 1
+            self.processBar.setValue(self.CntForProcess)
+            print("cnt +++++++++++++++++++")
+
     def scanDevice_timeout(self):
         if not self.isEnabled():
             return
@@ -87,10 +118,14 @@ class mainwindow(QMainWindow):
         if self.detectOnceEnable:
             self.analyseUSB()
             if len(usbMSC) == self.lastMscMum:
+                # self.log("MSC Reload OK ...")
+                self.timerEvent(False)
                 self.processBar.setValue(99)
-                self.log("MSC Reload OK ...")
-                self.parseLinktext(self.cbbDevice.currentIndex())
-                self.detectOnceEnable = False
+                for i in range(len(usbMSC)):
+                    if usbMSC[i][:2] == self.linker.getVolume():
+                        index = i
+                        self.parseLinktext(index)
+                        self.detectOnceEnable = False
         else:
             if len(usbMSC) != self.cbbDevice.count():
                 self.cbbDevice.clear()
@@ -133,6 +168,21 @@ class mainwindow(QMainWindow):
             self.linker.getUID()+'\n- Dir  : \t'+self.linker.getVolume()+\
             '\n- Beep :\t'+self.linker.getOriBeep()+'\n- Power:\t'+\
             self.linker.getOriPower())
+        self.updateVersion()
+
+    def updateVersion(self):
+        self.cbbVersion.clear()
+        if (self.linker.getType() == 'MM32LINK-MINI'):
+            versionstring = ['220520', '220729', '221130']
+        elif (self.linker.getType() == 'MM32LINK-MAX'):
+            versionstring = ['220520']
+        elif (self.linker.getType() == 'MM32LINK-OB'):
+            versionstring = ['220729', '221130']
+        selfVersion = self.linker.getVersion()
+        self.cbbVersion.addItems(versionstring)
+        self.cbbVersion.setCurrentText(selfVersion)
+        self.btnUpgrade.setEnabled(True)
+        
 
     def analyseUSB(self):
         disks = scanUSBDevice()
@@ -159,7 +209,6 @@ class mainwindow(QMainWindow):
                     usbMSC.append(linkBTString.group())
 
     def linkerConfig(self):
-        self.processBar.setValue(0)
         fileNeed = []
         noNeed = 0
         if (self.linker.getBeep() == self.linker.getOriBeep()):
@@ -182,6 +231,8 @@ class mainwindow(QMainWindow):
 
         if noNeed >= 2:
             self.log("NO change to config ...")
+            self.myTimerState(False)
+            self.processBar.reset()
 
         if len(fileNeed):
             tmpPath = get_path()+"\\config\\"
@@ -198,7 +249,6 @@ class mainwindow(QMainWindow):
             except Exception as e:
                 print("Files copy error")
                 pass
-            self.processBar.setValue(49)
             self.detectOnceEnable = True
             
     @pyqtSlot()  
@@ -208,11 +258,15 @@ class mainwindow(QMainWindow):
 
     @pyqtSlot()
     def on_btnUpgrade_clicked(self):
-        print("on_btnUpgrade_clicked")
+        self.processBar.reset()
+        self.myTimerState(True)
+        print("Now Update Version: "+self.cbbVersion.currentText())
+        self.upgradeAction = True
         pass
 
     @pyqtSlot()
     def on_btnRefresh_clicked(self):
+        self.processBar.reset()
         self.linker.__init__()
         self.analyseUSB()
         self.scanNum = len(usbMSC)
@@ -222,6 +276,7 @@ class mainwindow(QMainWindow):
     @pyqtSlot()
     def on_btnOK_clicked(self):
         self.processBar.reset()
+        self.myTimerState(True)
         self.lastMscMum = len(usbMSC)
         if self.cboxBeep.isChecked():
             self.linker.setBeep('ON')
